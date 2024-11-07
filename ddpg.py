@@ -34,7 +34,7 @@ class QValueNet(torch.nn.Module):
     
 class DDPG:
     ''' DDPG算法 '''
-    def __init__(self, is_train, state_dim, hidden_dim, action_dim, action_bound, sigma, actor_lr, critic_lr, tau, gamma, device):
+    def __init__(self, is_train, state_dim, hidden_dim, action_dim, action_bound, sigma, actor_lr, critic_lr, tau, gamma, device, num_episodes):
         self.actor = PolicyNet(state_dim, hidden_dim, action_dim, action_bound).to(device)
         self.critic = QValueNet(state_dim, hidden_dim, action_dim).to(device)
         if is_train:
@@ -51,12 +51,18 @@ class DDPG:
         self.tau = tau  # 目标网络软更新参数
         self.action_dim = action_dim
         self.device = device
+        self.is_train = is_train
+        self.num_episodes = num_episodes
+        self.counter = 0
 
     def take_action(self, state):
+        self.counter += 1
         state = torch.tensor(state, dtype=torch.float).to(self.device)
         action = self.actor(state).item()
         # 给动作添加噪声，增加探索
-        action = action + self.sigma * np.random.randn(self.action_dim)
+        if self.is_train:
+            action = action + (self.sigma * np.random.randn(self.action_dim)) * 0.5 ** (self.counter // self.num_episodes)
+            # action = action + self.sigma * np.random.randn(self.action_dim)
         return action
 
     def soft_update(self, net, target_net):
