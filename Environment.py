@@ -46,16 +46,17 @@ class ENV():
         return state, punish
     
     def step(self, action):
-        action = action.item()
+        action = action
         # 把违反约束的程度作为惩罚加入reward
         power = action + self.load[self.t + self.arrival_time + 24]
-        punish = {'power': 0, 'soc': 0}
+        punish = {'power': 0, 'power violation': 0, 'soc': 0, 'soc violation': 0}
         punish_power = 0
         if power > self.total_power_max:
             # 将违反约束的功率乘最大电价作为惩罚
             punish_power = 1e0 * power * self.price.max()
             # print('power violation:', punish_power, end='\r')
             punish['power'] += punish_power
+            punish['power violation'] += power
             action = self.total_power_max - self.load[self.t + self.arrival_time + 24]
             power = self.total_power_max
 
@@ -77,8 +78,8 @@ class ENV():
             if self.soc != self.soc_desired:
                 punish_soc = 1e0 * self.price.max() * abs(self.soc - self.soc_desired) / self.charge_efficiency
                 # punish_soc = 1e0 * self.price.max() * self.soc / self.charge_efficiency
-                # punish['soc'] += punish_soc
-                punish['soc'] += abs(self.soc - self.soc_desired)
+                punish['soc'] += punish_soc
+                punish['soc violation'] += abs(self.soc - self.soc_desired)
 
             reward += -punish_soc
             return next_state, reward, True, True, punish

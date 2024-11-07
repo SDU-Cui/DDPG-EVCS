@@ -62,6 +62,7 @@ class DDPG:
         # 给动作添加噪声，增加探索
         if self.is_train:
             action = action + (self.sigma * np.random.randn(self.action_dim)) * 0.5 ** (self.counter // self.num_episodes)
+            action = action.item()
             # action = action + self.sigma * np.random.randn(self.action_dim)
         return action
 

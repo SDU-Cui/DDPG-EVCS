@@ -59,13 +59,15 @@ def train_on_policy_agent(env, agent, num_episodes):
 
 def train_off_policy_agent(env, agent, num_episodes, replay_buffer, minimal_size, batch_size):
     return_list = []
-    punish_list = {'power': [], 'soc': []}
+    punish_list = {'power': [], 'power violation': [], 'soc': [], 'soc violation': []}
     for i in range(10):
         with tqdm(total=int(num_episodes/10), desc='Iteration %d' % i) as pbar:
             for i_episode in range(int(num_episodes/10)):
                 episode_return = 0
                 power_punish = 0
                 soc_punish = 0
+                power_violation = []
+                soc_violation = []
                 state, punish = env.reset()
                 done = False
                 truncated = False
@@ -92,6 +94,8 @@ def train_off_policy_agent(env, agent, num_episodes, replay_buffer, minimal_size
                     episode_return += reward
                     power_punish += punish['power']
                     soc_punish += punish['soc']
+                    power_violation.append(punish['power violation'])
+                    soc_violation.append(punish['soc violation'])
                     if replay_buffer.size() > minimal_size:
                         b_s, b_a, b_r, b_ns, b_d, b_t = replay_buffer.sample(batch_size)
                         transition_dict = {'states': b_s, 'actions': b_a, 'next_states': b_ns, 'rewards': b_r, 'dones': b_d, 'truncated': b_t}
@@ -99,10 +103,13 @@ def train_off_policy_agent(env, agent, num_episodes, replay_buffer, minimal_size
                 return_list.append(episode_return)
                 punish_list['power'].append(power_punish)
                 punish_list['soc'].append(soc_punish)
+                punish_list['power violation'].append(max(power_punish))
+                punish_list['soc violation'].append(max(soc_violation))
                 if (i_episode+1) % 10 == 0:
                     pbar.set_postfix({'episode': '%d' % (num_episodes/10 * i + i_episode+1), 'return': '%.3f' % np.mean(return_list[-10:]),
-                                      'power violation': '%.3f' % np.mean(punish_list['power'][-10:]),
-                                      'soc violation': '%.3f' % np.mean(punish_list['soc'][-10:])})
+                                      'power punish': '%.3f' % np.mean(punish_list['power'][-10:]),
+                                      'soc punish': '%.3f' % np.mean(punish_list['soc'][-10:]),
+                                      'soc violation': '%.3f' % np.mean(punish_list['soc violation'][-10:])})
                 pbar.update(1)
     return return_list, punish_list
 
